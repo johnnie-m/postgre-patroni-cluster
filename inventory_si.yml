@@ -13,13 +13,13 @@ dbservers:
     172.16.101.224:
 etcdservers:
   hosts:
-    etcd01:
+    cprd-ea-dbp01:
       ansible_host: 172.16.101.215
-    etcd02:
+    cprd-ea-dbp01:
       ansible_host: 172.16.101.216
-    etcd03:
+    cprd-ea-dbp01:
       ansible_host: 172.16.101.217
-    etcd04:
+    cprd-ea-dbp01:
       ansible_host: 172.16.101.218
 pgservers:
   hosts:
