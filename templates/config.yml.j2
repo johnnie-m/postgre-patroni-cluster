@@ -1,0 +1,162 @@
+scope: etcd-pg-cluster                                                      #              =ETCD_CLUSTER_TOKEN
+name: {{ ansible_hostname }}                                                # ****!!!!**** разное значение на всех узлах
+#namespace: /service/                                                       #              одинаковое значение на всех узлах
+
+restapi:
+  listen: {{ ansible_default_ipv4.address }}:8008                           # ****!!!!**** адрес узла, на котором находится этот файл
+  connect_address: {{ ansible_default_ipv4.address }}:8008                  # ****!!!!**** адрес узла, на котором находится этот файл
+
+etcd:
+  hosts:                                                                    # список всех узлов, на которых установлен etcd
+  - 192.168.2.101:2379
+  - 192.168.2.102:2379
+  - 192.168.2.103:2379
+  - 192.168.2.104:2379
+
+bootstrap:
+  method: initdb
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    master_start_timeout: 300
+    synchronous_mode: true
+    synchronous_mode_strict: true
+    synchronous_node_count: 1
+
+  initdb:
+    - encoding: UTF8
+    - locale: en_US.UTF-8
+    - data-checksums
+
+  pg_hba:                                                                   # должен содержать адреса ВСЕХ машин, используемых в кластере
+    - local all postgres trust
+    - local all all trust
+    - host all all 0.0.0.0/0 md5
+    - host replication replicator localhost trust
+    - host replication replicator 192.168.2.111/32 md5
+    - host replication replicator 192.168.2.112/32 md5
+    - host replication replicator 192.168.2.113/32 md5
+    - host replication replicator 192.168.2.114/32 md5
+#    - host replication replicator 192.168.2.115/32 md5
+
+postgresql:
+  listen: {{ ansible_default_ipv4.address }}:5432                           # ****!!!!**** адрес узла, на котором находится этот файл
+  connect_address: {{ ansible_default_ipv4.address }}:5432                  # ****!!!!**** адрес узла, на котором находится этот файл
+  use_unix_socket: true
+  data_dir: /var/lib/postgresql/14/main                                     # каталоги данных
+  bin_dir: /usr/lib/postgresql/14/bin
+  config_dir: /etc/postgresql/14/main
+  pgpass: /var/lib/postgresql/.pgpass_patroni
+
+  authentication:
+    replication:
+      username: replicator
+      password: ReplicatorPassword
+    superuser:
+      username: postgres
+      password: PostgresPassword
+
+  parameters:
+    unix_socket_directories: /var/run/postgresql
+    remove_data_directory_on_rewind_failure: false
+    remove_data_directory_on_diverged_timelines: false
+    use_pg_rewind: true
+    use_slots: true
+    parameters:
+    max_connections: 2000
+    superuser_reserved_connections: 5
+    max_locks_per_transaction: 64
+    max_prepared_transactions: 0
+    huge_pages: try
+    shared_buffers: 512MB
+    work_mem: 128MB
+    maintenance_work_mem: 256MB
+    effective_cache_size: 4GB
+    checkpoint_timeout: 15min
+    checkpoint_completion_target: 0.9
+    wal_compression: on
+    min_wal_size: 2GB
+    max_wal_size: 4GB
+    wal_buffers: 32MB
+    default_statistics_target: 1000
+    seq_page_cost: 1
+    random_page_cost: 4
+    effective_io_concurrency: 2
+    synchronous_commit: on
+    synchronous_standby_names: "*"
+    autovacuum: on
+    autovacuum_max_workers: 5
+    autovacuum_vacuum_scale_factor: 0.01
+    autovacuum_analyze_scale_factor: 0.02
+    autovacuum_vacuum_cost_limit: 200
+    autovacuum_vacuum_cost_delay: 20
+    autovacuum_naptime: 1s
+    max_files_per_process: 4096
+    archive_mode: on
+    archive_timeout: 1800s
+    archive_command: 'test ! -f /usr/share/pg_log_archive/%f && cp %p /usr/share/pg_log_archive/%f'
+    wal_level: replica
+    wal_keep_segments: 130
+    max_wal_senders: 10
+    max_replication_slots: 10
+    hot_standby: on
+    hot_standby_feedback: True
+    wal_log_hints: on
+    shared_preload_libraries: pg_stat_statements,auto_explain
+    pg_stat_statements.max: 10000
+    pg_stat_statements.track: all
+    pg_stat_statements.save: off
+    auto_explain.log_min_duration: 10s
+    auto_explain.log_analyze: true
+    auto_explain.log_buffers: true
+    auto_explain.log_timing: false
+    auto_explain.log_triggers: true
+    auto_explain.log_verbose: true
+    auto_explain.log_nested_statements: true
+    track_io_timing: on
+    log_lock_waits: on
+    log_temp_files: 3
+    track_activities: on
+    track_counts: on
+    track_functions: all
+    log_checkpoints: on
+    logging_collector: on
+    log_truncate_on_rotation: on
+    log_rotation_age: 1d
+    log_rotation_size: 0
+    log_line_prefix: '%t [%p-%l] %r %q%u@%d '
+    log_filename: 'postgresql-%a.log'
+    log_directory: /var/log/postgresql
+    log_statement: all
+    log_min_error_statement: ERROR
+
+  pg_hba:                                                                   # должен содержать адреса ВСЕХ машин, используемых в кластере
+    - local all postgres trust
+    - local all all trust
+    - host all all 0.0.0.0/0 md5
+    - host replication replicator localhost trust
+    - host replication replicator 192.168.2.111/32 md5
+    - host replication replicator 192.168.2.112/32 md5
+    - host replication replicator 192.168.2.113/32 md5
+    - host replication replicator 192.168.2.114/32 md5
+#    - host replication replicator 192.168.2.115/32 md5
+
+  create_replica_methods:
+    - basebackup
+
+  basebackup:
+    max-rate: '100M'
+    checkpoint: 'fast'
+
+watchdog:
+  mode: off                                                                 # off, automatic, required
+  device: /dev/watchdog
+  safety_margin: 5
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false

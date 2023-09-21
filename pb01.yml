@@ -1,0 +1,149 @@
+---
+
+- name: install etcd
+  hosts: etcdservers
+  become: true
+  tasks:
+
+  - name: 0 show names
+    ansible.builtin.debug:
+      msg:
+        - "hostname: {{ ansible_hostname }}"
+        - "address:  {{ ansible_default_ipv4.address }}"
+
+  #----------------------------------------------------ETCD----------------------------------------------------#
+
+  - name: 1 install etcd
+    apt:
+      name: etcd
+      state: latest
+
+  - name: 2 stop etcd
+    service:
+      name: etcd
+      state: stopped
+
+  - name: 3 remove data dirs
+    shell:
+      cmd: |
+        sudo rm -rf /var/lib/etcd/ && \
+        [ ! -f /etc/default/etcd ] || \
+        sudo mv /etc/default/etcd /etc/default/etcd.backup && \
+        sudo mkdir /var/lib/etcd && \
+        sudo chown -R etcd:etcd /var/lib/etcd
+
+  - name: 4 config
+    template:
+      src: etcd.j2
+      dest: /etc/default/etcd
+
+  - name: 5 restart etcd
+    become: true
+    service:
+      name: etcd
+      state: restarted
+    async: 60
+    poll: 5
+
+  #--------------------------------------------------POSTGRES--------------------------------------------------#
+
+- name: install postgresql
+  hosts: pgservers
+  become: true
+  tasks:
+
+  - name: 6 add source
+    shell:
+      sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list'
+
+  - name: 7 get key
+    shell:
+      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+  - name: 8 apt update
+    apt:
+      update-cache: true
+
+  - name: 9 install
+    apt:
+      name: postgresql-14
+      state: present
+
+- name: setup leader
+  hosts: pgleaders
+  become: true
+  tasks:
+
+  - name: 10 db setup
+    shell:
+      cmd: |
+        cd / && \
+        sudo -u postgres psql -U postgres -c \
+        "CREATE ROLE elma365 WITH login password 'SecretPassword';" && \
+        sudo -u postgres psql -U postgres -c \
+        "CREATE DATABASE elma365 WITH OWNER elma365;" && \
+        sudo -u postgres psql -U postgres -d elma365 -c \
+        "CREATE EXTENSION \"uuid-ossp\"; CREATE EXTENSION pg_trgm;" && \
+        sudo -u postgres psql -U postgres -c \
+        "CREATE USER replicator WITH REPLICATION ENCRYPTED PASSWORD 'ReplicatorPassword';" && \
+        sudo -u postgres psql -U postgres -c \
+        "ALTER USER postgres PASSWORD 'PostgresPassword';"
+
+- name: setup replicas
+  hosts: pgreplicas
+  become: true
+  tasks:
+
+  - name: 11 remove data dirs
+    shell:
+      cmd: sudo rm -rf /var/lib/postgresql/14/main
+
+- name: stop pgcluster
+  hosts: pgservers
+  become: true
+  tasks:
+
+  - name: 12 stop postgresql
+    service:
+      name: postgresql
+      state: stopped
+
+  #--------------------------------------------------PATRONI--------------------------------------------------#
+
+  - name: 13 install patroni
+    apt:
+      name:
+      - python3-pip
+      - python3-dev
+      - libpq-dev
+      - patroni
+
+  - name: 14 python libs
+    pip:
+      name:
+      - psycopg2-binary
+      - wheel
+      - python-etcd
+
+  - name: 15 make dir
+    shell:
+      cmd: |
+        sudo rm -rf /etc/patroni && \
+        sudo mkdir -p /etc/patroni
+
+  - name: 16 config
+    template:
+      src: config.yml.j2
+      dest: /etc/patroni/config.yml
+
+  - name: 17 dir permit
+    shell:
+      cmd: |
+        sudo chown -R postgres:postgres /etc/patroni && \
+        sudo chmod -R 700 /etc/patroni
+
+  - name: 18 enable
+    service:
+      name: patroni
+      enabled: true

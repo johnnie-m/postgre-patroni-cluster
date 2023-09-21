@@ -1,0 +1,48 @@
+---
+dbservers:
+  hosts:
+    192.168.2.101:
+    192.168.2.102:
+    192.168.2.103:
+    192.168.2.111:
+    192.168.2.112:
+    192.168.2.113:
+    192.168.2.114:
+    192.168.2.121:
+    192.168.2.122:
+    192.168.2.123:
+etcdservers:
+  hosts:
+    etcd01:
+      ansible_host: 192.168.2.101
+    etcd02:
+      ansible_host: 192.168.2.102
+    etcd03:
+      ansible_host: 192.168.2.103
+pgservers:
+  hosts:
+    postgre01:
+      ansible_host: 192.168.2.111
+    postgre02:
+      ansible_host: 192.168.2.112
+    postgre03:
+      ansible_host: 192.168.2.113
+    postgre04:
+      ansible_host: 192.168.2.114
+pgleaders:
+  hosts:
+    postgre01:
+      ansible_host: 192.168.2.111
+pgreplicas:
+  hosts:
+    postgre02:
+      ansible_host: 192.168.2.112
+    postgre03:
+      ansible_host: 192.168.2.113
+    postgre04:
+      ansible_host: 192.168.2.114
+mngservers:
+  hosts:
+    192.168.2.121:
+    192.168.2.122:
+    192.168.2.123:
