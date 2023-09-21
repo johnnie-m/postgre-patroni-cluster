@@ -1,0 +1,48 @@
+---
+dbservers:
+  hosts:
+    172.16.101.215:
+    172.16.101.216:
+    172.16.101.217:
+    172.16.101.218:
+    172.16.101.219:
+    172.16.101.220:
+    172.16.101.221:
+    172.16.101.222:
+    172.16.101.223:
+    172.16.101.224:
+etcdservers:
+  hosts:
+    etcd01:
+      ansible_host: 172.16.101.215
+    etcd02:
+      ansible_host: 172.16.101.216
+    etcd03:
+      ansible_host: 172.16.101.217
+    etcd04:
+      ansible_host: 172.16.101.218
+pgservers:
+  hosts:
+    postgre01:
+      ansible_host: 172.16.101.215
+    postgre02:
+      ansible_host: 172.16.101.216
+    postgre03:
+      ansible_host: 172.16.101.217
+    postgre04:
+      ansible_host: 172.16.101.218
+pgleaders:
+  hosts:
+    postgre01:
+      ansible_host: 172.16.101.215
+pgreplicas:
+  hosts:
+    postgre02:
+      ansible_host: 172.16.101.216
+    postgre03:
+      ansible_host: 172.16.101.217
+    postgre04:
+      ansible_host: 172.16.101.218
+mngservers:
+  hosts:
+
